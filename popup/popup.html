@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>ANEF Suivi</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand"><span class="dot"></span>ANEF Suivi</div>
+    <div class="top-actions">
+      <button id="btnPrivacy" class="icon" title="Mode privé (masquer les données)">◐</button>
+      <button id="btnRefresh" class="icon" title="Actualiser">↻</button>
+    </div>
+  </header>
+
+  <div id="alert" class="alert" hidden></div>
+
+  <section id="empty" class="empty" hidden>
+    <p>Aucune donnée pour l'instant.</p>
+    <p class="muted">Connecte-toi sur ANEF puis ouvre « Mon compte » : le statut est lu automatiquement.</p>
+    <button id="btnOpenEmpty" class="primary">Ouvrir ANEF</button>
+  </section>
+
+  <main id="main" hidden>
+    <section class="status" id="statusCard">
+      <div class="status-head">
+        <span class="status-icon" id="sIcon"></span>
+        <div>
+          <div class="eyebrow">Étape <b id="sStep"></b>/12 · <span id="sSub"></span></div>
+          <h1 id="sPhase"></h1>
+          <div class="explication" id="sExpl"></div>
+        </div>
+      </div>
+      <div class="steps" id="steps"></div>
+      <p class="desc" id="sDesc"></p>
+      <div class="since">Depuis le <b id="sSince" class="sens"></b> · <span id="sSinceDur"></span></div>
+      <div class="chips" id="chips"></div>
+    </section>
+
+    <section class="grid">
+      <div class="kv"><span>Dépôt</span><b id="kDepot" class="sens">—</b><em id="kDepotDur"></em></div>
+      <div class="kv"><span>Entretien</span><b id="kEa" class="sens">—</b><em id="kEaLieu" class="sens"></em></div>
+      <div class="kv"><span>Préfecture</span><b id="kPref" class="sens">—</b></div>
+      <div class="kv"><span>N° décret</span><b id="kDecret" class="sens">—</b></div>
+      <div class="kv"><span>N° national</span><b id="kNum" class="sens">—</b></div>
+      <div class="kv"><span>Vérifié</span><b id="kCheck">—</b><em id="kVia"></em></div>
+    </section>
+
+    <section id="dmrBox" class="block" hidden>
+      <h2>Modification du décret</h2>
+      <div id="dmr"></div>
+    </section>
+
+    <details class="block" open>
+      <summary>Événements ANEF <span class="count" id="tlCount"></span></summary>
+      <ol class="timeline" id="timeline"></ol>
+    </details>
+
+    <details class="block">
+      <summary>Historique local <span class="count" id="hCount"></span></summary>
+      <ol class="timeline" id="history"></ol>
+    </details>
+
+    <details class="block">
+      <summary>Signaux bruts</summary>
+      <dl class="raw" id="raw"></dl>
+      <div class="row">
+        <button id="btnExportJson" class="ghost">Exporter JSON brut</button>
+      </div>
+    </details>
+
+    <section class="actions">
+      <button id="btnPng" class="ghost">Image</button>
+      <button id="btnCopy" class="ghost">Copier résumé</button>
+      <button id="btnOpen" class="ghost">Ouvrir ANEF</button>
+    </section>
+  </main>
+
+  <details class="block settings">
+    <summary>Paramètres</summary>
+    <label class="sw"><input type="checkbox" id="optAuto"> Vérification automatique</label>
+    <label class="sel">Intervalle
+      <select id="optInterval">
+        <option value="30">30 min</option>
+        <option value="60">1 h</option>
+        <option value="120">2 h</option>
+        <option value="240">4 h</option>
+        <option value="720">12 h</option>
+      </select>
+    </label>
+    <label class="sw"><input type="checkbox" id="optNotify"> Notifications</label>
+    <label class="sw"><input type="checkbox" id="optWindow"> Repli fenêtre minimisée si l'appel direct échoue</label>
+    <button id="btnClear" class="danger">Effacer toutes les données locales</button>
+  </details>
+
+  <canvas id="cv" width="1000" height="560" hidden></canvas>
+  <script src="../lib/statuts.js"></script>
+  <script src="../lib/util.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

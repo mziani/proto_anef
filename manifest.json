@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "ANEF Suivi (perso)",
+  "version": "0.1.0",
+  "description": "Suivi local du dossier de naturalisation ANEF. Aucune donnée envoyée hors de ton navigateur.",
+  "minimum_chrome_version": "111",
+  "permissions": ["storage", "alarms", "notifications"],
+  "host_permissions": [
+    "https://administration-etrangers-en-france.interieur.gouv.fr/*",
+    "https://sso.anef.dgef.interieur.gouv.fr/*"
+  ],
+  "background": { "service_worker": "background.js" },
+  "content_scripts": [
+    {
+      "matches": ["https://administration-etrangers-en-france.interieur.gouv.fr/*"],
+      "js": ["lib/collect.js", "content/page.js"],
+      "run_at": "document_idle",
+      "world": "MAIN"
+    },
+    {
+      "matches": ["https://administration-etrangers-en-france.interieur.gouv.fr/*"],
+      "js": ["content/bridge.js"],
+      "run_at": "document_start"
+    }
+  ],
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "ANEF Suivi",
+    "default_icon": { "16": "icons/icon16.png", "32": "icons/icon32.png", "48": "icons/icon48.png", "128": "icons/icon128.png" }
+  },
+  "icons": { "16": "icons/icon16.png", "32": "icons/icon32.png", "48": "icons/icon48.png", "128": "icons/icon128.png" }
+}
