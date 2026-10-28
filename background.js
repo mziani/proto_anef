@@ -35,9 +35,33 @@ function extractInfo(res) {
     ville: dom.ville || null,
     numeroNational: d.numero_national || null,
     currentStep: d.current_step ?? null,
-    dateStatut: res.stepper.date_statut
+    dateStatut: res.stepper.date_statut,
+    entretienReports: (ea?.rdv_reportes || []).map(r => r?.date_rdv_reporte).filter(Boolean),
+    complements: (Array.isArray(d.demande_complement) ? d.demande_complement : [])
+      .map(c => ({ date: c?.date_creation_demande || null, pieces: Array.isArray(c?.demande_complement) ? c.demande_complement.length : null, type: c?.type_complement || null }))
+      .filter(c => c.date)
   };
 }
+
+function minimalDetail(d) {
+  if (!d) return null;
+  const ea = d.entretien_assimilation || null;
+  return {
+    _created: d._created ?? null, _updated: d._updated ?? null, current_step: d.current_step ?? null,
+    statut: d.statut ?? null,
+    taxe_payee: d.taxe_payee ? { date_consommation: d.taxe_payee.date_consommation ?? null } : null,
+    entretien_assimilation: ea ? {
+      date_rdv: ea.date_rdv ?? null,
+      rdv_reportes: (ea.rdv_reportes || []).map(r => ({ date_rdv_reporte: r?.date_rdv_reporte ?? null })),
+      unite_gestion: ea.unite_gestion ? { nom_plateforme: ea.unite_gestion.nom_plateforme ?? null, libelle: ea.unite_gestion.libelle ?? null } : null
+    } : null,
+    demande_complement: (Array.isArray(d.demande_complement) ? d.demande_complement : [])
+      .map(c => ({ date_creation_demande: c?.date_creation_demande ?? null, type_complement: c?.type_complement ?? null,
+        nb_pieces: Array.isArray(c?.demande_complement) ? c.demande_complement.length : null })),
+    decret_assigne: !!res_decret(d)
+  };
+}
+const res_decret = (d) => (d?.demande?.informations?.etat_civil?.identites_decrets || []).some(i => i?.decret?.id);
 
 async function setBadge(code, error) {
   if (error) {
@@ -94,7 +118,7 @@ async function processResult(res, via) {
   }
 
   const dossier = { id: res.stepper.id, derived, info: extractInfo(res), dmr: res.dmr, since, updatedAt: now, held };
-  await set({ dossier, history, raw: res });
+  await set({ dossier, history, raw: { ...res, detail: minimalDetail(res.detail), dmr: res.dmr ? { statut: res.dmr.statut, date_depot: res.dmr.date_depot ?? null } : null } });
   await patchState({ lastCheck: now, lastSuccess: now, lastError: null, lastErrorDetail: null, via });
   await setBadge(code);
 
@@ -195,7 +219,12 @@ async function schedule() {
   }
 }
 
-chrome.runtime.onInstalled.addListener(async () => { await cleanupOrphanWindow(); await schedule(); });
+chrome.runtime.onInstalled.addListener(async () => {
+  await cleanupOrphanWindow();
+  const { raw } = await get('raw');
+  if (raw?.detail?.demande) await set({ raw: { ...raw, detail: minimalDetail(raw.detail) } });
+  await schedule();
+});
 chrome.runtime.onStartup.addListener(async () => { await cleanupOrphanWindow(); await schedule(); });
 chrome.alarms.onAlarm.addListener((a) => { if (a.name === ALARM) runCheck('alarm'); });
 chrome.notifications.onClicked.addListener(() => chrome.tabs.create({ url: MON_COMPTE }));

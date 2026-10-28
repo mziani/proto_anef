@@ -81,7 +81,8 @@
       ? 'il y a ' + U.fmtDuration(U.daysSince(depot)) + (depotEvt && info.dateDepot && !sameDay ? ` · taxe ${U.fmtDate(info.dateDepot)}` : '')
       : '';
     $('kEa').textContent = U.fmtDate(info.entretienDate, true);
-    $('kEaLieu').textContent = info.entretienLieu || '';
+    const rep = (info.entretienReports || []).filter(Boolean);
+    $('kEaLieu').textContent = [info.entretienLieu, rep.length ? `reporté (initial ${U.fmtDate(rep[0])})` : null].filter(Boolean).join(' · ');
     $('kPref').textContent = info.prefecture || '—';
     $('kDecret').textContent = d.numeroDecret || '—';
     $('kNum').textContent = info.numeroNational || '—';
@@ -164,6 +165,7 @@
       ['frise', d.typeFrise ? `${d.typeFrise} · ${d.friseIndex}/${d.friseTotal} · ${d.friseKey}` : '—'],
       ['code interne', d.statutCode], ['dérivé de', d.derivedFrom + (d.coarse ? ' (grossier)' : '')],
       ['current_step', info.currentStep ?? '—'], ['date_statut ANEF', info.dateStatut || '—'],
+      ['compléments', (info.complements || []).map(c => `${U.fmtDate(c.date)}${c.pieces != null ? ` (${c.pieces} pièce${c.pieces > 1 ? 's' : ''})` : ''}`).join(', ') || '—'],
       ['id dossier', S.dossier.id]
     ];
     $('raw').replaceChildren(...rows.flatMap(([k, v]) => [el('dt', { text: k }), el('dd', { class: k === 'id dossier' ? 'sens' : '', text: String(v ?? '—') })]));
@@ -254,8 +256,20 @@
     setTimeout(() => { $('btnCopy').textContent = 'Copier résumé'; }, 1500);
   };
   $('btnPng').onclick = exportPng;
-  $('btnExportJson').onclick = () => download(`anef-brut-${new Date().toISOString().slice(0, 10)}.json`,
-    new Blob([JSON.stringify({ dossier: S.dossier, history: S.history, raw: S.raw }, null, 2)], { type: 'application/json' }));
+  function anonymized() {
+    const c = JSON.parse(JSON.stringify({ dossier: S.dossier, history: S.history, raw: S.raw }));
+    const d = c.dossier || {};
+    delete d.id; delete d.dmr;
+    if (d.info) ['numeroNational', 'ville', 'entretienAdresse', 'entretienInfo'].forEach(k => delete d.info[k]);
+    if (c.raw) {
+      if (c.raw.stepper) delete c.raw.stepper.id;
+      c.raw.notifications = (c.raw.notifications || []).filter(n => n.type_notification === 'NATIONALITE').map(({ id_demande, ...n }) => n);
+      delete c.raw.dmr;
+    }
+    return c;
+  }
+  $('btnExportJson').onclick = () => download(`anef-anonyme-${new Date().toISOString().slice(0, 10)}.json`,
+    new Blob([JSON.stringify(anonymized(), null, 2)], { type: 'application/json' }));
   $('btnClear').onclick = async () => {
     if (!confirm('Effacer statut, historique et données brutes stockés localement ?')) return;
     await send({ type: 'CLEAR' });
