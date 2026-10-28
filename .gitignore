@@ -2,3 +2,4 @@
 *.zip
 *.har
 node_modules/
+.env

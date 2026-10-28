@@ -27,6 +27,8 @@
   };
   const send = (msg) => chrome.runtime.sendMessage(msg);
 
+  const depotOf = (d, info) => (d.timeline || []).find(e => e.motif === 'CONFIRMATION_DEPOT')?.date || info.dateDepot;
+
   async function load() {
     S = await chrome.storage.local.get(['dossier', 'history', 'raw', 'state', 'settings']);
     S.settings = { ...DEFAULTS, ...(S.settings || {}) };
@@ -71,8 +73,13 @@
     if (dossier.held) chips.push(['Recul ignoré (signal grossier)', 'warn']);
     $('chips').replaceChildren(...chips.map(([t, c]) => el('span', { class: 'chip ' + c, text: t })));
 
-    $('kDepot').textContent = U.fmtDate(info.dateDepot);
-    $('kDepotDur').textContent = info.dateDepot ? 'il y a ' + U.fmtDuration(U.daysSince(info.dateDepot)) : '';
+    const depotEvt = (d.timeline || []).find(e => e.motif === 'CONFIRMATION_DEPOT')?.date;
+    const depot = depotOf(d, info);
+    const sameDay = depotEvt && info.dateDepot && U.daysBetween(info.dateDepot, depotEvt) === 0;
+    $('kDepot').textContent = U.fmtDate(depot);
+    $('kDepotDur').textContent = depot
+      ? 'il y a ' + U.fmtDuration(U.daysSince(depot)) + (depotEvt && info.dateDepot && !sameDay ? ` · taxe ${U.fmtDate(info.dateDepot)}` : '')
+      : '';
     $('kEa').textContent = U.fmtDate(info.entretienDate, true);
     $('kEaLieu').textContent = info.entretienLieu || '';
     $('kPref').textContent = info.prefecture || '—';
@@ -107,7 +114,7 @@
       const gap = prev ? U.daysBetween(prev.date, e.date) : null;
       return el('li', {},
         el('span', { text: e.icon }),
-        el('span', {}, e.label, gap != null ? el('span', { class: 's', text: `+${U.fmtDuration(gap)} après l'événement précédent` }) : null),
+        el('span', {}, e.label, gap != null ? el('span', { class: 's', text: gap === 0 ? 'même jour que le précédent' : `${U.fmtDuration(gap)} après le précédent` }) : null),
         el('span', { class: 'd sens', text: U.fmtDate(e.date) }));
     });
     $('timeline').replaceChildren(...(items.length ? items : [el('li', {}, el('span'), el('span', { class: 'muted', text: 'Aucun événement' }))]));
@@ -182,7 +189,7 @@
       `ANEF — Étape ${s.etape}/12 (${U.subStep(s.rang || 0)}) : ${s.phase}`,
       s.explication,
       `Depuis : ${priv ? '•••' : U.fmtDate(S.dossier.since)} (${U.fmtDuration(U.daysSince(S.dossier.since))})`,
-      `Dépôt : ${priv ? '•••' : U.fmtDate(info.dateDepot)}${info.dateDepot ? ` (${U.fmtDuration(U.daysSince(info.dateDepot))})` : ''}`
+      `Dépôt : ${priv ? '•••' : U.fmtDate(depotOf(d, info))}${depotOf(d, info) ? ` (${U.fmtDuration(U.daysSince(depotOf(d, info)))})` : ''}`
     ];
     if (info.entretienDate) lines.push(`Entretien : ${priv ? '•••' : U.fmtDate(info.entretienDate)}`);
     if (info.prefecture && !priv) lines.push(`Préfecture : ${info.prefecture}`);
@@ -220,7 +227,7 @@
     }
     const kv = [
       ['Depuis', priv ? `${U.fmtDuration(U.daysSince(S.dossier.since))}` : `${U.fmtDate(S.dossier.since)} · ${U.fmtDuration(U.daysSince(S.dossier.since))}`],
-      ['Dépôt', info.dateDepot ? (priv ? `il y a ${U.fmtDuration(U.daysSince(info.dateDepot))}` : `${U.fmtDate(info.dateDepot)} · ${U.fmtDuration(U.daysSince(info.dateDepot))}`) : '—'],
+      ['Dépôt', (() => { const dd = depotOf(d, info); return dd ? (priv ? `il y a ${U.fmtDuration(U.daysSince(dd))}` : `${U.fmtDate(dd)} · ${U.fmtDuration(U.daysSince(dd))}`) : '—'; })()],
       ['Entretien', info.entretienDate ? (priv ? 'fixé' : U.fmtDate(info.entretienDate)) : '—'],
       ['Préfecture', priv ? '•••' : (info.prefecture || '—')]
     ];
